@@ -12,7 +12,8 @@ textarea {
     color: skyblue;
     border: 2px solid rgb(246, 255, 0);
     border-radius: 5px;
-    font-size: large;
+    /*font-size: large;*/
+    font-size: x-large;
 }
 
 /* AJUSTE DE SIZE DE AMBOS BOTONES */
@@ -39,8 +40,9 @@ input {
     background-color: #f4f4f4;
     color: rgb(0, 255, 0);
     background-color: black;
-    font-size: large; 
-    height: 220px;
+    /*font-size: large;*/
+    font-size: x-large; 
+    height: 230px;
 }
 
 h3 {

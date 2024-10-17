@@ -1,7 +1,7 @@
 {
   const crearNodo = (tipoNodo, propiedades) => {
     const tipos = {
-      'numero': nodos.Numero, 
+      'primitivo': nodos.Primitivo, // el nodo este cambiara de ser numero a ser primitivo para un mejor manejo de la idea
       'agrupacion': nodos.Agrupacion,
       'binaria': nodos.OperacionBinaria,
       'unaria': nodos.OperacionUnaria,
@@ -227,11 +227,11 @@ Propiedades = arg:Propiedad _ args:("," _ exp:Propiedad {return exp})* {return [
 //{return [arg, ...args]}
 
 // { return{ tipo: "numero", valor: parseFloat(text(), 10) } }
-Valor = DECIMAL {return crearNodo('numero', { valor: parseFloat(text()) })} 
-  / N_ENTERO {return crearNodo('numero', { valor: parseInt(text()) })}
-  / TEXTO {return crearNodo('numero', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles*/})}
-  / CHAR {return crearNodo('numero', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles */})}
-  / ("true"/"false") {return crearNodo('numero', { valor: JSON.parse(text()) /* el JSON.parse se usa para convertir los string a su valor bool*/})}
+Valor = DECIMAL {return crearNodo('primitivo', { valor: parseFloat(text()), tipo: 'float' })} 
+  / N_ENTERO {return crearNodo('primitivo', { valor: parseInt(text()), tipo: 'int' })}
+  / TEXTO {return crearNodo('primitivo', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles*/, tipo: 'string'})}
+  / CHAR {return crearNodo('primitivo', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles */})}
+  / ("true"/"false") {return crearNodo('primitivo', { valor: JSON.parse(text(),) /* el JSON.parse se usa para convertir los string a su valor bool*/, tipo: 'boolean'})}
   / "(" _ exp:Expresion _ ")" { return crearNodo('agrupacion', { exp }) }
   / "parseInt" _ "(" _ exp:Expresion _ ")" {return crearNodo('funcParseInt', { exp })}
   / "parseFloat" _ "(" _ exp:Expresion _ ")" {return crearNodo('funcParseFloat', { exp })}

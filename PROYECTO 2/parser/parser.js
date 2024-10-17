@@ -453,11 +453,11 @@ return op
   var peg$f53 = function(arg, args) { return [arg, ...args]};
   var peg$f54 = function(arg, exp) {return exp};
   var peg$f55 = function(arg, args) {return [arg, ...args.map(exp => ({ id: exp.id, valor: exp.valor }))]};
-  var peg$f56 = function() {return crearNodo('numero', { valor: parseFloat(text()) })};
-  var peg$f57 = function() {return crearNodo('numero', { valor: parseInt(text()) })};
-  var peg$f58 = function() {return crearNodo('numero', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles*/})};
-  var peg$f59 = function() {return crearNodo('numero', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles */})};
-  var peg$f60 = function() {return crearNodo('numero', { valor: JSON.parse(text()) /* el JSON.parse se usa para convertir los string a su valor bool*/})};
+  var peg$f56 = function() {return crearNodo('primitivo', { valor: parseFloat(text()), tipo: 'float' })};
+  var peg$f57 = function() {return crearNodo('primitivo', { valor: parseInt(text()), tipo: 'int' })};
+  var peg$f58 = function() {return crearNodo('primitivo', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles*/, tipo: 'string'})};
+  var peg$f59 = function() {return crearNodo('primitivo', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles */})};
+  var peg$f60 = function() {return crearNodo('primitivo', { valor: JSON.parse(text(),) /* el JSON.parse se usa para convertir los string a su valor bool*/, tipo: 'boolean'})};
   var peg$f61 = function(exp) { return crearNodo('agrupacion', { exp }) };
   var peg$f62 = function(exp) {return crearNodo('funcParseInt', { exp })};
   var peg$f63 = function(exp) {return crearNodo('funcParseFloat', { exp })};
@@ -4363,7 +4363,7 @@ return op
 
   const crearNodo = (tipoNodo, propiedades) => {
     const tipos = {
-      'numero': nodos.Numero, 
+      'primitivo': nodos.Primitivo, // el nodo este cambiara de ser numero a ser primitivo para un mejor manejo de la idea
       'agrupacion': nodos.Agrupacion,
       'binaria': nodos.OperacionBinaria,
       'unaria': nodos.OperacionUnaria,

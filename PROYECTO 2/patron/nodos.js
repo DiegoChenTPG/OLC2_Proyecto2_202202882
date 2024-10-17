@@ -140,13 +140,14 @@ export class Agrupacion extends Expresion {
     }
 }
     
-export class Numero extends Expresion {
+export class Primitivo extends Expresion {
 
     /**
     * @param {Object} options
     * @param {number} options.valor Valor del numero
+ * @param {string} options.tipo Tipo del primitivo
     */
-    constructor({ valor }) {
+    constructor({ valor, tipo }) {
         super();
         
         /**
@@ -155,13 +156,20 @@ export class Numero extends Expresion {
         */
         this.valor = valor;
 
+
+        /**
+         * Tipo del primitivo
+         * @type {string}
+        */
+        this.tipo = tipo;
+
     }
 
     /**
      * @param {BaseVisitor} visitor
      */
     accept(visitor) {
-        return visitor.visitNumero(this);
+        return visitor.visitPrimitivo(this);
     }
 }
     
@@ -425,7 +433,7 @@ export class For extends Expresion {
 
     /**
     * @param {Object} options
-    * @param {Expresion|DeclaracionVariable} options.inicializacion 
+    * @param {Expresion|DeclaracionVariable} options.inicializacion Variable de inicio para evaluar la condicion
  * @param {Expresion} options.condicion Condicion del for
  * @param {Expresion} options.actualizacion actualizacion del for
  * @param {Expresion} options.sentencias Sentencias que trae el for
@@ -434,7 +442,7 @@ export class For extends Expresion {
         super();
         
         /**
-         * 
+         * Variable de inicio para evaluar la condicion
          * @type {Expresion|DeclaracionVariable}
         */
         this.inicializacion = inicializacion;
@@ -1235,4 +1243,4 @@ export class Default extends Expresion {
     }
 }
     
-export default { Expresion, OperacionBinaria, OperacionUnaria, Agrupacion, Numero, DeclaracionVariable, AccesoVariable, Print, ExpresionStmt, Asignacion, Bloque, If, While, For, Break, Continue, Return, Llamada, DeclaracionFuncion, DeclaracionStruct, Instancia, Get, Set, DeclaracionArreglo, AccesoValorArreglo, AsignacionValorArreglo, DeclaracionArregloReservado, FuncParseInt, FuncParseFloat, FuncToString, FuncToLowerCase, FuncToUpperCase, FuncTypeOf, FuncIndexOf, FuncJoin, FuncLength, Switch, Case, Default }
+export default { Expresion, OperacionBinaria, OperacionUnaria, Agrupacion, Primitivo, DeclaracionVariable, AccesoVariable, Print, ExpresionStmt, Asignacion, Bloque, If, While, For, Break, Continue, Return, Llamada, DeclaracionFuncion, DeclaracionStruct, Instancia, Get, Set, DeclaracionArreglo, AccesoValorArreglo, AsignacionValorArreglo, DeclaracionArregloReservado, FuncParseInt, FuncParseFloat, FuncToString, FuncToLowerCase, FuncToUpperCase, FuncTypeOf, FuncIndexOf, FuncJoin, FuncLength, Switch, Case, Default }

@@ -13,7 +13,7 @@
  * @typedef {import('./nodos').Agrupacion} Agrupacion
 
 
- * @typedef {import('./nodos').Numero} Numero
+ * @typedef {import('./nodos').Primitivo} Primitivo
 
 
  * @typedef {import('./nodos').DeclaracionVariable} DeclaracionVariable
@@ -164,11 +164,11 @@ export class BaseVisitor {
     
 
     /**
-     * @param {Numero} node
+     * @param {Primitivo} node
      * @returns {any}
      */
-    visitNumero(node) {
-        throw new Error('Metodo visitNumero no implementado');
+    visitPrimitivo(node) {
+        throw new Error('Metodo visitPrimitivo no implementado');
     }
     
 
