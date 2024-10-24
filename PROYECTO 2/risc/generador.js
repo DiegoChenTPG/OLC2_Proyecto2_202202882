@@ -31,6 +31,7 @@ export class Generador{
         this.depth = 0
         this._usedBuiltins = new Set()
         this._labelCounter = 0
+        this.instruccionesDeFunciones = []
     }
 
 
@@ -118,6 +119,10 @@ export class Generador{
         this.instrucciones.push(new Instruction('li', rd, inmediato))
     }
 
+    la(rd, label){
+        this.instrucciones.push(new Instruction('la', rd, label))
+    }
+
     push(rd = r.T0) {
         this.addi(r.SP, r.SP, -4) // 4 bytes = 32 bits
         this.sw(rd, r.SP)
@@ -135,6 +140,10 @@ export class Generador{
 
     jal(label) {
         this.instrucciones.push(new Instruction('jal', label))
+    }
+
+    jalr(rd, rs1, imm){
+        this.instrucciones.push(new Instruction('jalr', rd, rs1, imm))
     }
 
     j(label){
@@ -346,7 +355,8 @@ export class Generador{
         this.comment("Fin del programa")
         this.endProgram()
         this.comment("Builtins")
-
+        this.instruccionesDeFunciones.forEach(instruccion => this.instrucciones.push(instruccion))
+            
         Array.from(this._usedBuiltins).forEach(builtinName => {
             this.addLabel(builtinName)
             builtins[builtinName](this)
@@ -399,6 +409,12 @@ main:
 
     fcvtsw(rd, rs1) {
         this.instrucciones.push(new Instruction('fcvt.s.w', rd, rs1))
+    }
+
+
+    getFrameLocal(index){
+        const frameRelativeLocal = this.objectStack.filter(obj => obj.type === "local")
+        return frameRelativeLocal[index]
     }
 }
 

@@ -11,7 +11,7 @@ export const registers = {
     T4: 't4',
     T5: 't5',
     //T6: 't6',
-    S0_FP: 's0/fp',
+    FP: 's0',
     A0: 'a0',
     A1: 'a1',
     A2: 'a2',

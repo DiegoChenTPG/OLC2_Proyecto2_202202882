@@ -579,10 +579,11 @@ export class DeclaracionFuncion extends Expresion {
     /**
     * @param {Object} options
     * @param {string} options.id identificador de la funcion
- * @param {string[]} options.parametros Parametros de la funcion
+ * @param {Param[]} options.parametros Parametros de la funcion
  * @param {Bloque} options.bloque Cuerpo de la funcion
+ * @param {string | undefined} options.tipo Tipo de retorno de la funcion
     */
-    constructor({ id, parametros, bloque }) {
+    constructor({ id, parametros, bloque, tipo }) {
         super();
         
         /**
@@ -594,7 +595,7 @@ export class DeclaracionFuncion extends Expresion {
 
         /**
          * Parametros de la funcion
-         * @type {string[]}
+         * @type {Param[]}
         */
         this.parametros = parametros;
 
@@ -605,6 +606,13 @@ export class DeclaracionFuncion extends Expresion {
         */
         this.bloque = bloque;
 
+
+        /**
+         * Tipo de retorno de la funcion
+         * @type {string | undefined}
+        */
+        this.tipo = tipo;
+
     }
 
     /**
@@ -612,6 +620,39 @@ export class DeclaracionFuncion extends Expresion {
      */
     accept(visitor) {
         return visitor.visitDeclaracionFuncion(this);
+    }
+}
+    
+export class Param extends Expresion {
+
+    /**
+    * @param {Object} options
+    * @param {string} options.id Identificador del parametro
+ * @param {string} options.tipo Tipo del parametro
+    */
+    constructor({ id, tipo }) {
+        super();
+        
+        /**
+         * Identificador del parametro
+         * @type {string}
+        */
+        this.id = id;
+
+
+        /**
+         * Tipo del parametro
+         * @type {string}
+        */
+        this.tipo = tipo;
+
+    }
+
+    /**
+     * @param {BaseVisitor} visitor
+     */
+    accept(visitor) {
+        return visitor.visitParam(this);
     }
 }
     
@@ -1243,4 +1284,4 @@ export class Default extends Expresion {
     }
 }
     
-export default { Expresion, OperacionBinaria, OperacionUnaria, Agrupacion, Primitivo, DeclaracionVariable, AccesoVariable, Print, ExpresionStmt, Asignacion, Bloque, If, While, For, Break, Continue, Return, Llamada, DeclaracionFuncion, DeclaracionStruct, Instancia, Get, Set, DeclaracionArreglo, AccesoValorArreglo, AsignacionValorArreglo, DeclaracionArregloReservado, FuncParseInt, FuncParseFloat, FuncToString, FuncToLowerCase, FuncToUpperCase, FuncTypeOf, FuncIndexOf, FuncJoin, FuncLength, Switch, Case, Default }
+export default { Expresion, OperacionBinaria, OperacionUnaria, Agrupacion, Primitivo, DeclaracionVariable, AccesoVariable, Print, ExpresionStmt, Asignacion, Bloque, If, While, For, Break, Continue, Return, Llamada, DeclaracionFuncion, Param, DeclaracionStruct, Instancia, Get, Set, DeclaracionArreglo, AccesoValorArreglo, AsignacionValorArreglo, DeclaracionArregloReservado, FuncParseInt, FuncParseFloat, FuncToString, FuncToLowerCase, FuncToUpperCase, FuncTypeOf, FuncIndexOf, FuncJoin, FuncLength, Switch, Case, Default }

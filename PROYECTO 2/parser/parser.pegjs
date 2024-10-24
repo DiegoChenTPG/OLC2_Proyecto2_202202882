@@ -38,7 +38,8 @@
       'funcTypeOf': nodos.FuncTypeOf,
       'funcIndexOf': nodos.FuncIndexOf,
       'funcJoin':nodos.FuncJoin,
-      'funcLength':nodos.FuncLength
+      'funcLength':nodos.FuncLength,
+      'param': nodos.Param
     }
     const nodo = new tipos[tipoNodo](propiedades)
     nodo.location = location()
@@ -65,10 +66,14 @@ Declaracion_Arreglo = tipo:Tipo _ "[" _ "]" _ id:ID _ "=" _ "{" _ valors:Valores
 
 ValoresArreglo = val:Expresion _ valors:(","_ vals:Expresion {return vals})* {return [val, ...valors]}
 
-Declaracion_Funcion = "void" _ id:ID _ "(" _ parametros:Parametros? _ ")" _ bloque:Bloque {return crearNodo('declaracionFuncion', {id, parametros: parametros || [], bloque})}
+//Declaracion_Funcion = "void" _ id:ID _ "(" _ parametros:Parametros? _ ")" _ bloque:Bloque {return crearNodo('declaracionFuncion', {id, parametros: parametros || [], bloque})}
+Declaracion_Funcion = tipo:TipoFuncion _ id:ID _ "(" _ parametros:Parametros? _ ")" _ bloque:Bloque {return crearNodo('declaracionFuncion', {id, parametros: parametros || [], bloque, tipo})}
 
-Parametros = id:ID _ parametros:(","_ ids:ID {return ids})* {return [id, ...parametros]}
 
+
+Parametros = id:Param _ parametros:(","_ ids:Param {return ids})* {return [id, ...parametros]} //ACORDAR QUE CAMBIAMOS LO DE LAS FUNCIONES Y LOS PARAMETROS PARA TIPARLOS
+
+Param = tipo:Tipo _ id:ID { return crearNodo('param', {id, tipo})}
 
 
 Declaracion_Struct =  "struct" _ id:ID _ "{" _ declaraciones:Cuerpo_Struct* _ "}" {return crearNodo('declaracionStruct', {id, declaraciones}) }
@@ -255,6 +260,15 @@ Tipo = "int" {return 'int'}
       / "string" {return 'string'}
       / "boolean" {return 'boolean'}
       / "char" {return 'char'}
+      / ID {return 'instance'}
+
+
+TipoFuncion = "int" {return 'int'}
+      / "float" {return 'float'}
+      / "string" {return 'string'}
+      / "boolean" {return 'boolean'}
+      / "char" {return 'char'}
+      / "void" {return 'undefined'}
       / ID {return 'instance'}
 
 DECIMAL =  [0-9]+(.[0-9]+)        

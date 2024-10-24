@@ -1,22 +1,29 @@
 
 import { registers as r, floatRegister as f } from "../risc/constantes.js";
 import { Generador } from "../risc/generador.js";
+import { FrameVisitor } from "./frame.js";
+import { AccesoVariable } from "./nodos.js";
 import { BaseVisitor } from "./visitor.js";
 
 
-export class CompilerVisitor extends BaseVisitor{
-    constructor(){
+export class CompilerVisitor extends BaseVisitor {
+    constructor() {
         super()
         this.code = new Generador()
 
         this.continueLabel = null
         this.breakLabel = null
+
+        this.functionMetada = {}
+        this.insideFunction = false
+        this.frameDclIndex = 0
+        this.returnLabel = null
     }
 
     /**
     * @type {BaseVisitor['visitExpresionStmt']}
     */
-    visitExpresionStmt(node){
+    visitExpresionStmt(node) {
         node.exp.accept(this)
         this.code.popObject(r.T0)
     }
@@ -24,7 +31,7 @@ export class CompilerVisitor extends BaseVisitor{
     /**
     * @type {BaseVisitor['visitPrimitivo']}
     */
-    visitPrimitivo(node){
+    visitPrimitivo(node) {
         /*
         this.code.li(r.T0, node.valor)
         this.code.push()
@@ -38,11 +45,11 @@ export class CompilerVisitor extends BaseVisitor{
     /**
     * @type {BaseVisitor['visitOperacionBinaria']}
     */
-    visitOperacionBinaria(node){
+    visitOperacionBinaria(node) {
         this.code.comment(`Operacion: ${node.op}`);
 
 
-        if(node.op === "&&"){
+        if (node.op === "&&") {
             node.izq.accept(this) // izq
             this.code.popObject(r.T0) // izq
 
@@ -62,7 +69,7 @@ export class CompilerVisitor extends BaseVisitor{
             this.code.push(r.T0)
 
             this.code.addLabel(labelEnd)
-            this.code.pushObject({type: 'boolean', length: 4})
+            this.code.pushObject({ type: 'boolean', length: 4 })
             return
         }
 
@@ -87,8 +94,8 @@ export class CompilerVisitor extends BaseVisitor{
             this.code.push(r.T0)
 
             this.code.addLabel(labelEnd)
-            this.code.pushObject({type: 'boolean', length: 4})
-            return        
+            this.code.pushObject({ type: 'boolean', length: 4 })
+            return
         }
         node.izq.accept(this)
         node.der.accept(this)
@@ -97,16 +104,16 @@ export class CompilerVisitor extends BaseVisitor{
         const der = this.code.popObject(isDerFloat ? f.FT0 : r.T0)
         const isIzqFloat = this.code.getTopObject().type === "float"
         const izq = this.code.popObject(isIzqFloat ? f.FT1 : r.T1)
-        
+
         if (izq.type === "string" && der.type === "string") {
             this.code.add(r.A0, r.ZERO, r.T1)
             this.code.add(r.A1, r.ZERO, r.T0)
             this.code.callBuiltin('concatString')
-            this.code.pushObject({type: 'string', length: 4})
+            this.code.pushObject({ type: 'string', length: 4 })
             return
         }
 
-        if(isIzqFloat || isDerFloat) {
+        if (isIzqFloat || isDerFloat) {
             if (!isIzqFloat) this.code.fcvtsw(f.FT1, r.T1)
             if (!isDerFloat) this.code.fcvtsw(f.FT0, r.T0)
 
@@ -128,7 +135,7 @@ export class CompilerVisitor extends BaseVisitor{
                     break
             }
             this.code.pushFloat(f.FT0)
-            this.code.pushObject({type: 'float', length: 4})
+            this.code.pushObject({ type: 'float', length: 4 })
             return
         }
 
@@ -155,7 +162,7 @@ export class CompilerVisitor extends BaseVisitor{
                 break
             case "<=":
                 this.code.callBuiltin("lessOrEqual")
-                this.code.pushObject({type: 'boolean', length: 4})
+                this.code.pushObject({ type: 'boolean', length: 4 })
                 return
         }
         this.code.pushObject({ type: 'int', length: 4 })
@@ -164,7 +171,7 @@ export class CompilerVisitor extends BaseVisitor{
     /**
     * @type {BaseVisitor['visitOperacionUnaria']}
     */
-    visitOperacionUnaria(node){
+    visitOperacionUnaria(node) {
         node.exp.accept(this)
 
         this.code.popObject(r.T0)
@@ -174,7 +181,7 @@ export class CompilerVisitor extends BaseVisitor{
                 this.code.li(r.T1, 0)
                 this.code.sub(r.T0, r.T1, r.T0)
                 this.code.push(r.T0)
-                this.code.pushObject({type: 'int', length: 4})
+                this.code.pushObject({ type: 'int', length: 4 })
                 break
         }
     }
@@ -182,7 +189,7 @@ export class CompilerVisitor extends BaseVisitor{
     /**
     * @type {BaseVisitor['visitAgrupacion']}
     */
-    visitAgrupacion(node){
+    visitAgrupacion(node) {
         return node.exp.accept(this)
     }
 
@@ -191,7 +198,7 @@ export class CompilerVisitor extends BaseVisitor{
     * @type {BaseVisitor['visitPrint']}
     */
 
-    visitPrint(node){
+    visitPrint(node) {
         this.code.comment('Print')
         const valor = node.exp
 
@@ -219,10 +226,25 @@ export class CompilerVisitor extends BaseVisitor{
     /**
     * @type {BaseVisitor['visitDeclaracionVariable']}
     */
-    visitDeclaracionVariable(node){
+    visitDeclaracionVariable(node) {
         this.code.comment(`Declaracion Variable: ${node.id}`)
 
         node.exp.accept(this)
+
+        if (this.insideFunction) {
+            const localObject = this.code.getFrameLocal(this.frameDclIndex)
+            const valueObj = this.code.popObject(r.T0)
+
+            this.code.addi(r.T1, r.FP, -localObject.offset * 4)
+            this.code.sw(r.T0, r.T1)
+
+            // Inferir el tipo
+            localObject.type = valueObj.type
+            this.frameDclIndex++
+
+            return
+        }
+
         this.code.tagObject(node.id)
 
         this.code.comment(`Fin Declaracion Variable: ${node.id}`)
@@ -231,12 +253,18 @@ export class CompilerVisitor extends BaseVisitor{
     /**
     * @type {BaseVisitor['visitAsignacion']}
     */
-    visitAsignacion(node){
+    visitAsignacion(node) {
         this.code.comment(`Asignacion Variable: ${node.id}`)
 
         node.asignacion.accept(this)
         const valorObjeto = this.code.popObject(r.T0)
         const [offset, variableObject] = this.code.getObject(node.id)
+
+        if (this.insideFunction) {
+            this.code.addi(r.T1, r.FP, -variableObject.offset * 4)
+            this.code.sw(r.T0, r.T1)
+            return
+        }
 
         this.code.addi(r.T1, r.SP, offset)
         this.code.sw(r.T0, r.T1)
@@ -253,14 +281,24 @@ export class CompilerVisitor extends BaseVisitor{
     /**
     * @type {BaseVisitor['visitAccesoVariable']}
     */
-    visitAccesoVariable(node){
+    visitAccesoVariable(node) {
         this.code.comment(`Acceso Variable: ${node.id}`)
 
         const [offset, variableObject] = this.code.getObject(node.id)
+
+        if (this.insideFunction) {
+            this.code.addi(r.T1, r.FP, -variableObject.offset * 4)
+            this.code.lw(r.T0, r.T1)
+            this.code.push(r.T0)
+            this.code.pushObject({ ...variableObject, id:undefined})
+            return
+        }
+
+
         this.code.addi(r.T0, r.SP, offset)
         this.code.lw(r.T1, r.T0)
         this.code.push(r.T1)
-        this.code.pushObject({... variableObject, id: undefined})
+        this.code.pushObject({ ...variableObject, id: undefined })
 
         this.code.comment(`Fin Acceso Variable: ${node.id}`)
     }
@@ -268,17 +306,17 @@ export class CompilerVisitor extends BaseVisitor{
     /**
     * @type {BaseVisitor['visitBloque']}
     */
-    visitBloque(node){
+    visitBloque(node) {
         this.code.comment("Inicio de bloque")
 
         this.code.newScope()
 
-        node.dcls.forEach(d => {d.accept(this)})
+        node.dcls.forEach(d => { d.accept(this) })
 
         this.code.comment("Reduciendo la pila")
         const bytesToRemove = this.code.endScope()
 
-        if(bytesToRemove > 0){
+        if (bytesToRemove > 0) {
             this.code.addi(r.SP, r.SP, bytesToRemove)
         }
         this.code.comment("Fin de bloque")
@@ -288,7 +326,7 @@ export class CompilerVisitor extends BaseVisitor{
     /**
     * @type {BaseVisitor['visitIf']}
     */
-    visitIf(node){
+    visitIf(node) {
         this.code.comment("Inicio del If")
 
         this.code.comment("Condicion")
@@ -300,7 +338,7 @@ export class CompilerVisitor extends BaseVisitor{
 
         const hasElse = !!node.sentenciasFalse
 
-        if(hasElse) {
+        if (hasElse) {
             const elseLabel = this.code.getLabel()
             const endIfLabel = this.code.getLabel()
 
@@ -329,7 +367,7 @@ export class CompilerVisitor extends BaseVisitor{
     /**
     * @type {BaseVisitor['visitWhile']}
     */
-    visitWhile(node){   
+    visitWhile(node) {
 
         const startWhileLabel = this.code.getLabel()
         const prevContinueLabel = this.continueLabel
@@ -358,8 +396,8 @@ export class CompilerVisitor extends BaseVisitor{
     /**
      * @type {BaseVisitor['visitFor']}
      */
-    visitFor(node){
-        
+    visitFor(node) {
+
         this.code.comment("For")
 
         const startForLabel = this.code.getLabel()
@@ -396,7 +434,7 @@ export class CompilerVisitor extends BaseVisitor{
         this.code.comment("Reduciendo la pila")
         const bytesToRemove = this.code.endScope()
 
-        if(bytesToRemove > 0){
+        if (bytesToRemove > 0) {
             this.code.addi(r.SP, r.SP, bytesToRemove)
 
         }
@@ -412,14 +450,167 @@ export class CompilerVisitor extends BaseVisitor{
     /**
      * @type {BaseVisitor['visitBreak']}
      */
-    visitBreak(node){
+    visitBreak(node) {
         this.code.j(this.breakLabel)
     }
 
     /**
      * @type {BaseVisitor['visitContinue']}
      */
-    visitContinue(node){
+    visitContinue(node) {
         this.code.j(this.continueLabel)
+    }
+
+
+    /**
+     * @type {BaseVisitor['visitDeclaracionFuncion']}
+     */
+
+    visitDeclaracionFuncion(node) {
+        const baseSize = 2 // | ra | fp |
+        const paramSize = node.parametros.length // | ra | fp | p1 | p2 | ... | pn |
+
+        const frameVisitor = new FrameVisitor(baseSize + paramSize)
+        node.bloque.accept(frameVisitor)
+        const localFrame = frameVisitor.frame
+        const localSize = localFrame.length // | ra | fp | p1 | p2 | ... | pn | l1 | l2 | ... | ln |
+
+        const returnSize = 1 // | ra | fp | p1 | p2 | ... | pn | l1 | l2 | ... | ln | rv |
+
+        const totalSize = baseSize + paramSize + localSize + returnSize
+        this.functionMetada[node.id] = {
+            frameSize: totalSize,
+            returnType: node.tipo,
+        }
+
+        const instruccionesDeMain = this.code.instrucciones
+        const instruccionesDeDeclaracionDeFuncion = []
+        this.code.instrucciones = instruccionesDeDeclaracionDeFuncion
+
+        node.parametros.forEach((param, index) => {
+            this.code.pushObject({
+                id: param.id,
+                type: param.tipo,
+                length: 4,
+                offset: baseSize + index
+            })
+        })
+
+        localFrame.forEach(variableLocal => {
+            this.code.pushObject({
+                ...variableLocal,
+                length: 4,
+                type: 'local'
+            })
+        })
+
+        this.insideFunction = node.id
+        this.frameDclIndex = 0
+        this.returnLabel = this.code.getLabel()
+
+        this.code.comment(`Declaracion de la funcion: ${node.id}`)
+        this.code.addLabel(node.id)
+
+        node.bloque.accept(this)
+
+        this.code.addLabel(this.returnLabel)
+
+        this.code.add(r.T0, r.ZERO, r.FP)
+        this.code.lw(r.RA, r.T0)
+        this.code.jalr(r.ZERO, r.RA, 0)
+        this.code.comment(`Fin de declaracion de la funcion: ${node.id}`)
+
+        //Limpiar metadatos
+
+        for (let index = 0; index < paramSize + localSize; index++) {
+            this.code.objectStack.pop()            // aqui no se retrocede el SP (stack pointer), hay que hacerlo luego
+        }
+
+        this.code.instrucciones = instruccionesDeMain
+
+        instruccionesDeDeclaracionDeFuncion.forEach(instruccion => {
+            this.code.instruccionesDeFunciones.push(instruccion)
+        })
+
+    }
+
+    /**
+     * @type {BaseVisitor['visitLlamada']}
+     */
+    visitLlamada(node) {
+        if (!(node.callee instanceof AccesoVariable)) return
+
+        const nombreFuncion = node.callee.id
+
+        this.code.comment(`Llamada a funcion: ${nombreFuncion}`)
+
+        const etiquetaRetornoLlamada = this.code.getLabel()
+
+        // Guardar los argumentos
+        node.args.forEach((arg, index) => {
+            arg.accept(this)
+            this.code.popObject(r.T0)
+            this.code.addi(r.T1, r.SP, -4 * (3 + index))
+            this.code.sw(r.T0, r.T1)
+        })
+        // Calcular la direccion del nuevo FP en T1
+        this.code.addi(r.T1, r.SP, -4)
+
+        // Guardar direccion de retorno
+        this.code.la(r.T0, etiquetaRetornoLlamada)
+        this.code.push(r.T0)
+
+        // Guardar el FP
+        this.code.push(r.FP)
+        this.code.addi(r.FP, r.T1, 0)
+
+        // Colocar el SP al final del frame
+        this.code.addi(r.SP, r.SP, -(node.args.length * 4))
+
+        // Saltar a la funcion
+        this.code.j(nombreFuncion)
+        this.code.addLabel(etiquetaRetornoLlamada)
+
+        // Recuperamos el valor de retorno
+        const frameSize = this.functionMetada[nombreFuncion].frameSize
+        const returnSize = frameSize - 1
+        this.code.addi(r.T0, r.FP, -returnSize * 4)
+        this.code.lw(r.A0, r.T0)
+
+        // Regresar el FP al contexto de ejecucion anterior
+        this.code.addi(r.T0, r.FP, -4)
+        this.code.lw(r.FP, r.T0)
+
+        // Regresar el SP al contexto de ejecucion anterior
+        this.code.addi(r.SP, r.SP, (frameSize - 1) * 4)
+
+        this.code.push(r.A0)
+        this.code.pushObject({ type: this.functionMetada[nombreFuncion].returnType, length: 4 })
+        this.code.comment(`Fin llamada a funcion: ${nombreFuncion}`)
+
+    }
+
+    /**
+     * @type {BaseVisitor['visitReturn']}
+     */
+    visitReturn(node) {
+        this.code.comment(`Inicio Return`)
+
+
+        if (node.exp) {
+            node.exp.accept(this)
+            this.code.popObject(r.A0)
+
+            const frameSize = this.functionMetada[this.insideFunction].frameSize
+            const returnOffest = frameSize - 1
+            this.code.addi(r.T0, r.FP, -returnOffest * 4)
+            this.code.sw(r.A0, r.T0)
+
+        }
+
+
+        this.code.j(this.returnLabel)
+        this.code.comment(`Final Return`)
+
     }
 }

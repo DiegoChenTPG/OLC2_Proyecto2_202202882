@@ -58,6 +58,9 @@
  * @typedef {import('./nodos').DeclaracionFuncion} DeclaracionFuncion
 
 
+ * @typedef {import('./nodos').Param} Param
+
+
  * @typedef {import('./nodos').DeclaracionStruct} DeclaracionStruct
 
 
@@ -295,6 +298,15 @@ export class BaseVisitor {
      */
     visitDeclaracionFuncion(node) {
         throw new Error('Metodo visitDeclaracionFuncion no implementado');
+    }
+    
+
+    /**
+     * @param {Param} node
+     * @returns {any}
+     */
+    visitParam(node) {
+        throw new Error('Metodo visitParam no implementado');
     }
     
 
