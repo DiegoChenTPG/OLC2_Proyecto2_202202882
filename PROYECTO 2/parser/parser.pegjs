@@ -235,7 +235,7 @@ Propiedades = arg:Propiedad _ args:("," _ exp:Propiedad {return exp})* {return [
 Valor = DECIMAL {return crearNodo('primitivo', { valor: parseFloat(text()), tipo: 'float' })} 
   / N_ENTERO {return crearNodo('primitivo', { valor: parseInt(text()), tipo: 'int' })}
   / TEXTO {return crearNodo('primitivo', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles*/, tipo: 'string'})}
-  / CHAR {return crearNodo('primitivo', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles */})}
+  / CHAR {return crearNodo('primitivo', { valor: String(text().slice(1, -1)) /* Se quitan las comillas simples */, tipo: 'char'})}
   / ("true"/"false") {return crearNodo('primitivo', { valor: JSON.parse(text(),) /* el JSON.parse se usa para convertir los string a su valor bool*/, tipo: 'boolean'})}
   / "(" _ exp:Expresion _ ")" { return crearNodo('agrupacion', { exp }) }
   / "parseInt" _ "(" _ exp:Expresion _ ")" {return crearNodo('funcParseInt', { exp })}

@@ -1,7 +1,6 @@
 import { registers as r } from "./constantes.js";
 import { Generador } from "./generador.js";
 
-
 /**
  * @param {Generador} code 
  */
@@ -57,10 +56,27 @@ export const lessOrEqual = (code) => {
     code.push(r.T0)
     code.addLabel(endLabel)
 
+    
+}
+
+export const charToString = (code) => {
+    code.comment("Convirtiendo char a string")
+    code.push(r.HP)  // Guardar posición inicial
+
+    // Guardar el carácter
+    code.sb(r.A0, r.HP)
+    code.addi(r.HP, r.HP, 1)
+    
+    // Agregar null terminator
+    code.sb(r.ZERO, r.HP)
+    code.addi(r.HP, r.HP, 1)
+    
+    code.pop(r.A0)  // Recuperar la dirección inicial en A0
 }
 
 export const builtins = {
     concatString, 
-    lessOrEqual
+    lessOrEqual,
+    charToString
 }
 

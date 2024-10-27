@@ -48,7 +48,6 @@ export class CompilerVisitor extends BaseVisitor {
     visitOperacionBinaria(node) {
         this.code.comment(`Operacion: ${node.op}`);
 
-
         if (node.op === "&&") {
             node.izq.accept(this) // izq
             this.code.popObject(r.T0) // izq
@@ -97,6 +96,7 @@ export class CompilerVisitor extends BaseVisitor {
             this.code.pushObject({ type: 'boolean', length: 4 })
             return
         }
+
         node.izq.accept(this)
         node.der.accept(this)
 
@@ -105,6 +105,7 @@ export class CompilerVisitor extends BaseVisitor {
         const isIzqFloat = this.code.getTopObject().type === "float"
         const izq = this.code.popObject(isIzqFloat ? f.FT1 : r.T1)
 
+        /*
         if (izq.type === "string" && der.type === "string") {
             this.code.add(r.A0, r.ZERO, r.T1)
             this.code.add(r.A1, r.ZERO, r.T0)
@@ -112,6 +113,51 @@ export class CompilerVisitor extends BaseVisitor {
             this.code.pushObject({ type: 'string', length: 4 })
             return
         }
+        */
+
+        //MODIFICACION PARA MANEJO DE char y string por igual
+        if (node.op === "+") {
+            // Si ambos son char
+            if (izq.type === "char" && der.type === "char") {
+                this.code.add(r.T0, r.T0, r.T1)
+                this.code.push(r.T0)
+                this.code.pushObject({ type: 'int', length: 4 })
+                return
+            }
+
+            // Si al menos uno es string o es una mezcla de char y string
+            if (izq.type === "string" || izq.type === "char" || der.type === "string" || der.type === "char") {
+                console.log("ENTRAMOS ACA AL SEGUNDO IF")
+                console.log("izq " + izq.type)
+                console.log("der  " + der.type)
+
+                this.code.add(r.T2, r.ZERO, r.T1)  // Guardar izquierdo en T2 NEW
+                this.code.add(r.T3, r.ZERO, r.T0)  // Guardar derecho en T3 NEW
+
+                // Convertir izquierdo si es char
+                if (izq.type === "char") {
+                    this.code.add(r.A0, r.ZERO, r.T2)  // Poner char en A0
+                    this.code.callBuiltin('charToString')  // Convertir a string
+                    this.code.add(r.T2, r.ZERO, r.A0)  // Guardar resultado en T2
+                }
+
+                // Convertir derecho si es char
+                if (der.type === "char") {
+                    this.code.add(r.A0, r.ZERO, r.T3)  // Poner char en A0
+                    this.code.callBuiltin('charToString')  // Convertir a string
+                    this.code.add(r.T3, r.ZERO, r.A0)  // Guardar resultado en T3
+                }
+
+                //Concatenacion
+                this.code.add(r.A0, r.ZERO, r.T2)
+                this.code.add(r.A1, r.ZERO, r.T3)
+
+                this.code.callBuiltin('concatString')
+                this.code.pushObject({ type: 'string', length: 4 })
+                return
+            }
+        }
+
 
         if (isIzqFloat || isDerFloat) {
             if (!isIzqFloat) this.code.fcvtsw(f.FT1, r.T1)
@@ -173,17 +219,32 @@ export class CompilerVisitor extends BaseVisitor {
     */
     visitOperacionUnaria(node) {
         node.exp.accept(this)
+        const isFloat = this.code.getTopObject().type === "float"
+        const valor = this.code.popObject(isFloat ? f.FT0 : r.T0)
 
-        this.code.popObject(r.T0)
 
-        switch (node.op) {
-            case "-":
-                this.code.li(r.T1, 0)
-                this.code.sub(r.T0, r.T1, r.T0)
-                this.code.push(r.T0)
-                this.code.pushObject({ type: 'int', length: 4 })
-                break
+        //Manejo de la unaria para flotatnes
+        if (isFloat) {
+            this.code.li(r.T1, 0) // Cargar 0 en FT1
+            this.code.fcvtsw(f.FT1, r.T1)
+            this.code.fsub(f.FT0, f.FT1, f.FT0) // Negar el valor: 0 - valor
+
+            // Empujar el resultado al stack
+            this.code.pushFloat(f.FT0)
+            this.code.pushObject({ type: 'float', length: 4 })
+
+        } else {
+            switch (node.op) {
+                case "-":
+                    this.code.li(r.T1, 0)
+                    this.code.sub(r.T0, r.T1, r.T0)
+                    this.code.push(r.T0)
+                    this.code.pushObject({ type: 'int', length: 4 })
+                    break
+            }
         }
+
+
     }
 
     /**
@@ -202,7 +263,7 @@ export class CompilerVisitor extends BaseVisitor {
         this.code.comment('Print')
         const valor = node.exp
 
-        valor.forEach(exp => {
+        valor.forEach((exp, index) => {
             exp.accept(this)
             /*
             this.code.pop(r.A0)
@@ -215,38 +276,110 @@ export class CompilerVisitor extends BaseVisitor {
             const tipoPrint = {
                 'int': () => this.code.printInt(),
                 'string': () => this.code.printString(),
-                'float': () => this.code.printFloat()
+                'float': () => this.code.printFloat(),
+                'char': () => this.code.printChar(),
             }
             tipoPrint[object.type]()
 
+            //Esto es para agregarle el espacio en blanco por el caso de System.out.println("mundo", "hola");
+            if (index < valor.length - 1) {
+                this.code.li(r.A0, 32)
+                this.code.li(r.A7, 11)
+                this.code.ecall()
+            }
+
+
         })
+
+        // Agregado del salto de linea
+        this.code.li(r.A0, 10)
+        this.code.li(r.A7, 11)
+        this.code.ecall()
 
     }
 
     /**
     * @type {BaseVisitor['visitDeclaracionVariable']}
     */
+
     visitDeclaracionVariable(node) {
         this.code.comment(`Declaracion Variable: ${node.id}`)
+    
+        if (!node.exp) {
+            // Caso de declaración sin asignación (int a;)
+            if (this.insideFunction) {
 
-        node.exp.accept(this)
+                const localObject = this.code.getFrameLocal(this.frameDclIndex)
+                
+                this.code.push(r.HP)
+    
+                const palabraNull = "null"
+                for (let i = 0; i < palabraNull.length; i++) {
+                    this.code.li(r.T0, palabraNull.charCodeAt(i))
+                    this.code.sb(r.T0, r.HP)
+                    this.code.addi(r.HP, r.HP, 1)                
+                }
+    
+                this.code.sb(r.ZERO, r.HP)
+                this.code.addi(r.HP, r.HP, 1)
+    
 
-        if (this.insideFunction) {
-            const localObject = this.code.getFrameLocal(this.frameDclIndex)
-            const valueObj = this.code.popObject(r.T0)
+                const valueObj = { type: 'string', length: 4, valor: 'null' }
+                this.code.pushObject(valueObj)
+                
+                const tempValueObj = this.code.popObject(r.T0)
+                this.code.addi(r.T1, r.FP, -localObject.offset * 4)
+                this.code.sw(r.T0, r.T1)
+    
+                // Inferir el tipo
+                localObject.type = tempValueObj.type
+                this.frameDclIndex++
+                
+                return
+            } else {
+                // Si es variable global
+                this.code.push(r.HP)
+    
+                const palabraNull = "null"
+                for (let i = 0; i < palabraNull.length; i++) {
+                    this.code.li(r.T0, palabraNull.charCodeAt(i))
+                    this.code.sb(r.T0, r.HP)
+                    this.code.addi(r.HP, r.HP, 1)                
+                }
+    
+                this.code.sb(r.ZERO, r.HP)
+                this.code.addi(r.HP, r.HP, 1)
+    
+                //this.code.tagObject(node.id)
 
-            this.code.addi(r.T1, r.FP, -localObject.offset * 4)
-            this.code.sw(r.T0, r.T1)
 
-            // Inferir el tipo
-            localObject.type = valueObj.type
-            this.frameDclIndex++
+                const valueObj = { type: 'string', length: 4, valor: 'null' }
+                this.code.pushObject(valueObj)
+                this.code.tagObject(node.id)  
 
-            return
+                return
+            }
+        } else {
+            // Caso de declaración con asignación 
+            node.exp.accept(this)
+            
+            if (this.insideFunction) {
+                const localObject = this.code.getFrameLocal(this.frameDclIndex)
+                const valueObj = this.code.popObject(r.T0)
+    
+                this.code.addi(r.T1, r.FP, -localObject.offset * 4)
+                this.code.sw(r.T0, r.T1)
+    
+                // Inferir el tipo
+                localObject.type = valueObj.type
+                this.frameDclIndex++
+    
+                return
+            } else {
+                this.code.tagObject(node.id)
+            }
         }
-
-        this.code.tagObject(node.id)
-
+    
         this.code.comment(`Fin Declaracion Variable: ${node.id}`)
     }
 
@@ -263,14 +396,13 @@ export class CompilerVisitor extends BaseVisitor {
         if (this.insideFunction) {
             this.code.addi(r.T1, r.FP, -variableObject.offset * 4)
             this.code.sw(r.T0, r.T1)
+            variableObject.type = valorObjeto.type
             return
         }
 
         this.code.addi(r.T1, r.SP, offset)
         this.code.sw(r.T0, r.T1)
-
         variableObject.type = valorObjeto.type
-
         this.code.push(r.T0)
         this.code.pushObject(valorObjeto)
 
@@ -278,30 +410,57 @@ export class CompilerVisitor extends BaseVisitor {
         this.code.comment(`Fin Asignacion Variable: ${node.id}`)
     }
 
+
     /**
     * @type {BaseVisitor['visitAccesoVariable']}
     */
+
     visitAccesoVariable(node) {
         this.code.comment(`Acceso Variable: ${node.id}`)
-
         const [offset, variableObject] = this.code.getObject(node.id)
-
+    
         if (this.insideFunction) {
             this.code.addi(r.T1, r.FP, -variableObject.offset * 4)
-            this.code.lw(r.T0, r.T1)
+    
+            if (variableObject.valor === "null" && variableObject.type === "string") {
+                this.code.lw(r.T0, r.T1)
+                this.code.push(r.T0)
+                this.code.pushObject({type: 'string', length: 4})
+                return
+            }
+    
+            // Manejo específico por tipo
+            if (variableObject.type === 'char') {
+                this.code.lb(r.T0, r.T1)
+            } else {
+                this.code.lw(r.T0, r.T1)
+            }
+
             this.code.push(r.T0)
-            this.code.pushObject({ ...variableObject, id:undefined})
+            this.code.pushObject({ ...variableObject, id: undefined })
             return
         }
-
-
+    
         this.code.addi(r.T0, r.SP, offset)
-        this.code.lw(r.T1, r.T0)
+        if (variableObject.valor === "null" && variableObject.type === "string") {
+            this.code.lw(r.T1, r.T0)
+            this.code.push(r.T1)
+            this.code.pushObject({type: 'string', length: 4})
+            return
+        }
+    
+        if (variableObject.type === 'char') {
+            this.code.lb(r.T1, r.T0)
+        } else {
+            this.code.lw(r.T1, r.T0)
+        }
+    
         this.code.push(r.T1)
         this.code.pushObject({ ...variableObject, id: undefined })
-
+    
         this.code.comment(`Fin Acceso Variable: ${node.id}`)
     }
+
 
     /**
     * @type {BaseVisitor['visitBloque']}
@@ -547,6 +706,7 @@ export class CompilerVisitor extends BaseVisitor {
         const etiquetaRetornoLlamada = this.code.getLabel()
 
         // Guardar los argumentos
+        //this.code.addi(r.SP, r.SP, -4 * 2)
         node.args.forEach((arg, index) => {
             arg.accept(this)
             this.code.popObject(r.T0)

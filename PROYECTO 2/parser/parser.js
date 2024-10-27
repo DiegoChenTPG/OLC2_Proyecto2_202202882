@@ -457,7 +457,7 @@ return op
   var peg$f57 = function() {return crearNodo('primitivo', { valor: parseFloat(text()), tipo: 'float' })};
   var peg$f58 = function() {return crearNodo('primitivo', { valor: parseInt(text()), tipo: 'int' })};
   var peg$f59 = function() {return crearNodo('primitivo', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles*/, tipo: 'string'})};
-  var peg$f60 = function() {return crearNodo('primitivo', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles */})};
+  var peg$f60 = function() {return crearNodo('primitivo', { valor: String(text().slice(1, -1)) /* Se quitan las comillas dobles */, tipo: 'char'})};
   var peg$f61 = function() {return crearNodo('primitivo', { valor: JSON.parse(text(),) /* el JSON.parse se usa para convertir los string a su valor bool*/, tipo: 'boolean'})};
   var peg$f62 = function(exp) { return crearNodo('agrupacion', { exp }) };
   var peg$f63 = function(exp) {return crearNodo('funcParseInt', { exp })};

@@ -197,11 +197,15 @@ export class Generador{
 
     }
 
+    printChar() {
+        this.li(r.A7, 11)
+        this.ecall()      
+    }
+    
     printFloat(){
         this.li(r.A7, 2)
         this.ecall()
     }
-
 
     endProgram() {
         this.li(r.A7, 10)
@@ -242,7 +246,13 @@ export class Generador{
                 //length = stringArray.length * 4
                 length = 4
                 break
-            
+            case "char":
+                this.li(r.T0, object.valor.charCodeAt(0))
+                //this.sb(r.T0, r.HP) // esto fue agregado
+                //this.addi(r.HP, r.HP, 1) // esto fue agregado
+                this.push(r.T0) 
+                length = 4
+                break
             case "boolean":
                 this.li(r.T0, object.valor ? 1 : 0)
                 this.push(r.T0)
@@ -284,12 +294,14 @@ export class Generador{
             case "int":
                 this.pop(rd)
                 break
-    
             case "string":
                 /*
                 this.addi(rd, r.SP, 0)
                 this.addi(r.SP, r.SP, object.length)
                 */
+                this.pop(rd)
+                break
+            case "char":
                 this.pop(rd)
                 break
             case "boolean":
@@ -416,5 +428,6 @@ main:
         const frameRelativeLocal = this.objectStack.filter(obj => obj.type === "local")
         return frameRelativeLocal[index]
     }
+
 }
 
