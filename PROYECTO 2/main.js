@@ -8,6 +8,7 @@ const boton = document.getElementById("btnEjecutar")
 const consola = document.getElementById("salida")
 const btnCrear = document.getElementById("btnCrear");
 const btnGuardar = document.getElementById("btnGuardar");
+const btnLimpiar = document.getElementById("btnLimpiar");
 
 
 boton.addEventListener('click', () => {
@@ -16,29 +17,34 @@ boton.addEventListener('click', () => {
 
     try {
         const resultados = parse(codigo_analizar)
-    
+
         const interprete = new CompilerVisitor()
-    
-        for (const resultado of resultados){
+
+        for (const resultado of resultados) {
             resultado.accept(interprete)
         }
-        
+
         consola.innerHTML = interprete.code.toString()
 
 
-        
+
     } catch (error) {
         //manejo de errores sintacticos
         console.log(error)
         consola.innerHTML = error.message + "en la linea: " + error.location.start.line + " y columna: " + error.location.start.column
     }
-    
+
 
 })
 
+//Para limpiar la consola y el input
+btnLimpiar.addEventListener('click', () => {
+    consola.innerHTML = ""
+    editor.value = ""
+})
 
 // Manejo del TAB dentro del textarea
-editor.addEventListener('keydown', function(e) {
+editor.addEventListener('keydown', function (e) {
     if (e.key === 'Tab') {
         e.preventDefault() // Evita el comportamiento predeterminado
 
@@ -57,16 +63,16 @@ editor.addEventListener('keydown', function(e) {
 
 
 // Leer archivo .oak y mostrar su contenido en el editor
-fileInput.addEventListener('change', function(event) {
+fileInput.addEventListener('change', function (event) {
     const file = event.target.files[0]
 
     if (file && file.name.endsWith('.oak')) {
         const reader = new FileReader()
-        
-        reader.onload = function(e) {
+
+        reader.onload = function (e) {
             editor.value = e.target.result
         };
-        
+
         reader.readAsText(file)
     } else {
         alert('Solo se permiten archivos con extensión .oak')

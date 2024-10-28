@@ -115,7 +115,7 @@ export class CompilerVisitor extends BaseVisitor {
         }
         */
 
-        //MODIFICACION PARA MANEJO DE char y string por igual
+        //MODIFICACION PARA MANEJO DE  suma de char y string 
         if (node.op === "+") {
             // Si ambos son char
             if (izq.type === "char" && der.type === "char") {
@@ -158,7 +158,54 @@ export class CompilerVisitor extends BaseVisitor {
             }
         }
 
+        // Manejo del resto de operaciones con string
+        if (izq.type === "string" && der.type === "string") {
+            if (node.op === "==" || node.op === "!=") {
+                this.code.add(r.A0, r.ZERO, r.T1)
+                this.code.add(r.A1, r.ZERO, r.T0)
+                this.code.callBuiltin('compareString')
+                
+                this.code.add(r.T0, r.A0, r.ZERO)
+                if (node.op === "!=") {
+                    this.code.xori(r.T0, r.T0, 1)
+                }
+                this.code.push(r.T0)
+                this.code.pushObject({ type: 'boolean', length: 4 })
+                return
+            }
+        }
 
+        // Manejo del resto de operaciones con char
+        if (izq.type === "char" && der.type === "char") {
+            switch (node.op) {
+                case "==":
+                    this.code.callBuiltin("equal")
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+                case "!=":
+                    this.code.callBuiltin("notEqual")
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+                case "<":
+                    this.code.callBuiltin("lessThan")
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+                case "<=":
+                    this.code.callBuiltin("lessOrEqual")
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+                case ">":
+                    this.code.callBuiltin("greaterThan")
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+                case ">=":
+                    this.code.callBuiltin("greaterOrEqual")
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+            }   
+        }  
+        
+        
         if (isIzqFloat || isDerFloat) {
             if (!isIzqFloat) this.code.fcvtsw(f.FT1, r.T1)
             if (!isDerFloat) this.code.fcvtsw(f.FT0, r.T0)
@@ -179,6 +226,37 @@ export class CompilerVisitor extends BaseVisitor {
                 case "/":
                     this.code.fdiv(f.FT0, f.FT1, f.FT0)
                     break
+                case "==":
+                    this.code.feq(f.FT1, f.FT0)  
+                    this.code.push(r.A0)
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+                case "!=":
+                    this.code.feq(f.FT1, f.FT0)  
+                    this.code.xori(r.A0, r.A0, 1) 
+                    this.code.push(r.A0)
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+                case "<":
+                    this.code.flt(f.FT1, f.FT0)
+                    this.code.push(r.A0)
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+                case "<=":
+                    this.code.fle(f.FT1, f.FT0)
+                    this.code.push(r.A0)
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+                case ">":
+                    this.code.flt(f.FT0, f.FT1)
+                    this.code.push(r.A0)
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
+                case ">=":
+                    this.code.fle(f.FT0, f.FT1)
+                    this.code.push(r.A0)
+                    this.code.pushObject({ type: 'boolean', length: 4 })
+                    return
             }
             this.code.pushFloat(f.FT0)
             this.code.pushObject({ type: 'float', length: 4 })
@@ -199,8 +277,24 @@ export class CompilerVisitor extends BaseVisitor {
                 this.code.push(r.T0)
                 break
             case "/":
+                const divEndLabel = this.code.getLabel()
+                const divErrorLabel = this.code.getLabel()
+                this.code.beq(r.T0, r.ZERO, divErrorLabel) // Verificar si el denominador es cero
+
+                // Si no es cero, se ejecuta la division normal
                 this.code.div(r.T0, r.T1, r.T0)
                 this.code.push(r.T0)
+                this.code.j(divEndLabel)
+
+                this.code.addLabel(divErrorLabel)
+                // Imprimir mensaje de error
+                this.code.printStringLiteral("Error: Division by zero\n")
+                // Pushear null (usando -1 como representación de null)
+                this.code.li(r.T0, -1)
+                this.code.push(r.T0)
+                
+                this.code.addLabel(divEndLabel)
+
                 break
             case "%":
                 this.code.rem(r.T0, r.T1, r.T0)
@@ -208,6 +302,26 @@ export class CompilerVisitor extends BaseVisitor {
                 break
             case "<=":
                 this.code.callBuiltin("lessOrEqual")
+                this.code.pushObject({ type: 'boolean', length: 4 })
+                return
+            case "==":
+                this.code.callBuiltin("equal")
+                this.code.pushObject({ type: 'boolean', length: 4 })
+                return
+            case "!=":
+                this.code.callBuiltin("notEqual")
+                this.code.pushObject({ type: 'boolean', length: 4 })
+                return
+            case ">=":
+                this.code.callBuiltin("greaterOrEqual")
+                this.code.pushObject({ type: 'boolean', length: 4 })
+                return
+            case ">":
+                this.code.callBuiltin("greaterThan")
+                this.code.pushObject({ type: 'boolean', length: 4 })
+                return
+            case "<":
+                this.code.callBuiltin("lessThan")
                 this.code.pushObject({ type: 'boolean', length: 4 })
                 return
         }
@@ -244,7 +358,6 @@ export class CompilerVisitor extends BaseVisitor {
             }
         }
 
-
     }
 
     /**
@@ -278,6 +391,7 @@ export class CompilerVisitor extends BaseVisitor {
                 'string': () => this.code.printString(),
                 'float': () => this.code.printFloat(),
                 'char': () => this.code.printChar(),
+                'boolean': () => this.code.printBoolean()
             }
             tipoPrint[object.type]()
 
@@ -287,7 +401,6 @@ export class CompilerVisitor extends BaseVisitor {
                 this.code.li(r.A7, 11)
                 this.code.ecall()
             }
-
 
         })
 
@@ -304,82 +417,82 @@ export class CompilerVisitor extends BaseVisitor {
 
     visitDeclaracionVariable(node) {
         this.code.comment(`Declaracion Variable: ${node.id}`)
-    
+
         if (!node.exp) {
             // Caso de declaración sin asignación (int a;)
             if (this.insideFunction) {
 
                 const localObject = this.code.getFrameLocal(this.frameDclIndex)
-                
+
                 this.code.push(r.HP)
-    
+
                 const palabraNull = "null"
                 for (let i = 0; i < palabraNull.length; i++) {
                     this.code.li(r.T0, palabraNull.charCodeAt(i))
                     this.code.sb(r.T0, r.HP)
-                    this.code.addi(r.HP, r.HP, 1)                
+                    this.code.addi(r.HP, r.HP, 1)
                 }
-    
+
                 this.code.sb(r.ZERO, r.HP)
                 this.code.addi(r.HP, r.HP, 1)
-    
+
 
                 const valueObj = { type: 'string', length: 4, valor: 'null' }
                 this.code.pushObject(valueObj)
-                
+
                 const tempValueObj = this.code.popObject(r.T0)
                 this.code.addi(r.T1, r.FP, -localObject.offset * 4)
                 this.code.sw(r.T0, r.T1)
-    
+
                 // Inferir el tipo
                 localObject.type = tempValueObj.type
                 this.frameDclIndex++
-                
+
                 return
             } else {
                 // Si es variable global
                 this.code.push(r.HP)
-    
+
                 const palabraNull = "null"
                 for (let i = 0; i < palabraNull.length; i++) {
                     this.code.li(r.T0, palabraNull.charCodeAt(i))
                     this.code.sb(r.T0, r.HP)
-                    this.code.addi(r.HP, r.HP, 1)                
+                    this.code.addi(r.HP, r.HP, 1)
                 }
-    
+
                 this.code.sb(r.ZERO, r.HP)
                 this.code.addi(r.HP, r.HP, 1)
-    
+
                 //this.code.tagObject(node.id)
 
 
                 const valueObj = { type: 'string', length: 4, valor: 'null' }
                 this.code.pushObject(valueObj)
-                this.code.tagObject(node.id)  
+                this.code.tagObject(node.id)
 
                 return
             }
         } else {
             // Caso de declaración con asignación 
             node.exp.accept(this)
-            
+
             if (this.insideFunction) {
                 const localObject = this.code.getFrameLocal(this.frameDclIndex)
                 const valueObj = this.code.popObject(r.T0)
-    
+
                 this.code.addi(r.T1, r.FP, -localObject.offset * 4)
                 this.code.sw(r.T0, r.T1)
-    
+
                 // Inferir el tipo
                 localObject.type = valueObj.type
                 this.frameDclIndex++
-    
+
                 return
             } else {
                 this.code.tagObject(node.id)
             }
         }
-    
+
         this.code.comment(`Fin Declaracion Variable: ${node.id}`)
     }
 
@@ -418,17 +531,17 @@ export class CompilerVisitor extends BaseVisitor {
     visitAccesoVariable(node) {
         this.code.comment(`Acceso Variable: ${node.id}`)
         const [offset, variableObject] = this.code.getObject(node.id)
-    
+
         if (this.insideFunction) {
             this.code.addi(r.T1, r.FP, -variableObject.offset * 4)
-    
+
             if (variableObject.valor === "null" && variableObject.type === "string") {
                 this.code.lw(r.T0, r.T1)
                 this.code.push(r.T0)
-                this.code.pushObject({type: 'string', length: 4})
+                this.code.pushObject({ type: 'string', length: 4 })
                 return
             }
-    
+
             // Manejo específico por tipo
             if (variableObject.type === 'char') {
                 this.code.lb(r.T0, r.T1)
@@ -440,24 +553,24 @@ export class CompilerVisitor extends BaseVisitor {
             this.code.pushObject({ ...variableObject, id: undefined })
             return
         }
-    
+
         this.code.addi(r.T0, r.SP, offset)
         if (variableObject.valor === "null" && variableObject.type === "string") {
             this.code.lw(r.T1, r.T0)
             this.code.push(r.T1)
-            this.code.pushObject({type: 'string', length: 4})
+            this.code.pushObject({ type: 'string', length: 4 })
             return
         }
-    
+
         if (variableObject.type === 'char') {
             this.code.lb(r.T1, r.T0)
         } else {
             this.code.lw(r.T1, r.T0)
         }
-    
+
         this.code.push(r.T1)
         this.code.pushObject({ ...variableObject, id: undefined })
-    
+
         this.code.comment(`Fin Acceso Variable: ${node.id}`)
     }
 
@@ -620,6 +733,68 @@ export class CompilerVisitor extends BaseVisitor {
         this.code.j(this.continueLabel)
     }
 
+    /**
+     * @type {BaseVisitor['visitSwitch']}
+     */
+    visitSwitch(node){
+        this.code.comment("Inicio del Switch")
+    
+        // Evaluar la expresión del switch
+        this.code.comment("Evaluación de expresión switch")
+        node.inicial.accept(this)
+        this.code.popObject(r.T1)  // Guardamos el valor a comparar en T1
+        
+        const endSwitchLabel = this.code.getLabel()
+        const labels = new Map() // Para almacenar los labels de cada caso
+        
+        // Generar labels para cada caso
+        node.casos.forEach(caso => {
+            labels.set(caso, this.code.getLabel())
+        })
+        
+        // Label para el default si existe
+        const defaultLabel = node.c_default ? this.code.getLabel() : endSwitchLabel
+        
+        // Comparar con cada caso
+        node.casos.forEach(caso => {
+            this.code.comment(`Case ${caso.valor}`)
+            this.code.li(r.T0, caso.valor)
+            this.code.beq(r.T1, r.T0, labels.get(caso))
+        })
+        
+        // Saltar al default si ningún caso coincide
+        this.code.j(defaultLabel)
+        
+        // Generar código para cada caso
+        node.casos.forEach((caso, index) => {
+            this.code.addLabel(labels.get(caso))
+            this.code.comment(`Sentencias case ${caso.exp}`)
+            declaraciones.accept(this)
+            
+            
+            // Si no hay break explícito, continuamos al siguiente caso
+            if (!caso.tieneBreak) {
+                const nextCase = node.casos[index + 1]
+                if (nextCase) {
+                    this.code.j(labels.get(nextCase))
+                } else if (node.casoDefault) {
+                    this.code.j(defaultLabel)
+                }
+            } else {
+                this.code.j(endSwitchLabel)
+            }
+        })
+        
+        // Generar código para el default si existe
+        if (node.c_default) {
+            this.code.addLabel(defaultLabel)
+            this.code.comment("Default case")
+            node.casoDefault.accept(this)
+        }
+        
+        this.code.addLabel(endSwitchLabel)
+        this.code.comment("Fin del Switch")
+    }
 
     /**
      * @type {BaseVisitor['visitDeclaracionFuncion']}
@@ -690,7 +865,7 @@ export class CompilerVisitor extends BaseVisitor {
         instruccionesDeDeclaracionDeFuncion.forEach(instruccion => {
             this.code.instruccionesDeFunciones.push(instruccion)
         })
-
+        this.insideFunction = false
     }
 
     /**
@@ -703,16 +878,18 @@ export class CompilerVisitor extends BaseVisitor {
 
         this.code.comment(`Llamada a funcion: ${nombreFuncion}`)
 
+
+        // ----- Llamada a funciones foraneas
         const etiquetaRetornoLlamada = this.code.getLabel()
 
         // Guardar los argumentos
-        //this.code.addi(r.SP, r.SP, -4 * 2)
-        node.args.forEach((arg, index) => {
+        this.code.addi(r.SP, r.SP, -4 * 2)
+        node.args.forEach((arg) => {
             arg.accept(this)
-            this.code.popObject(r.T0)
-            this.code.addi(r.T1, r.SP, -4 * (3 + index))
-            this.code.sw(r.T0, r.T1)
         })
+        this.code.comment(`se hace antes el vergeo ese xd`)
+        this.code.addi(r.SP, r.SP, 4 * (node.args.length + 2))
+
         // Calcular la direccion del nuevo FP en T1
         this.code.addi(r.T1, r.SP, -4)
 
@@ -724,15 +901,14 @@ export class CompilerVisitor extends BaseVisitor {
         this.code.push(r.FP)
         this.code.addi(r.FP, r.T1, 0)
 
-        // Colocar el SP al final del frame
-        this.code.addi(r.SP, r.SP, -(node.args.length * 4))
+        const frameSize = this.functionMetada[nombreFuncion].frameSize
+        this.code.addi(r.SP, r.SP, -(frameSize - 2) * 4)
 
         // Saltar a la funcion
         this.code.j(nombreFuncion)
         this.code.addLabel(etiquetaRetornoLlamada)
 
         // Recuperamos el valor de retorno
-        const frameSize = this.functionMetada[nombreFuncion].frameSize
         const returnSize = frameSize - 1
         this.code.addi(r.T0, r.FP, -returnSize * 4)
         this.code.lw(r.A0, r.T0)
@@ -742,7 +918,7 @@ export class CompilerVisitor extends BaseVisitor {
         this.code.lw(r.FP, r.T0)
 
         // Regresar el SP al contexto de ejecucion anterior
-        this.code.addi(r.SP, r.SP, (frameSize - 1) * 4)
+        this.code.addi(r.SP, r.SP, frameSize * 4)
 
         this.code.push(r.A0)
         this.code.pushObject({ type: this.functionMetada[nombreFuncion].returnType, length: 4 })
@@ -773,4 +949,27 @@ export class CompilerVisitor extends BaseVisitor {
         this.code.comment(`Final Return`)
 
     }
+
+    /**
+     * @type {BaseVisitor['visitFuncParseInt']}
+     */
+    visitFuncParseInt(node) {
+
+        node.exp.accept(this)
+        this.code.popObject(r.A0)
+        this.code.callBuiltin('parseInt')
+        this.code.pushObject({ type: 'int', length: 4 })
+    }
+
+    /**
+     * @type {BaseVisitor['visitFuncParseFloat']}
+     */
+    visitFuncParseFloat(node) {
+        node.exp.accept(this)
+        this.code.popObject(r.A0)
+        this.code.callBuiltin('parseFloat')
+        this.code.pushObject({ type: 'float', length: 4 })
+    }
 }
+
+

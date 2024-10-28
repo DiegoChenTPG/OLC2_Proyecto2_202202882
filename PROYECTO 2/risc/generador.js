@@ -173,8 +173,25 @@ export class Generador{
             this.add(r.A0, rd, r.ZERO)
         }
 
+        // Verificar si es null (-1 en este caso)
+        const printEndLabel = this.getLabel()
+        const printNullLabel = this.getLabel()
+
+        // Cargamos -1 en un temporal solo para comparar
+        this.li(r.T1, -1)
+        this.beq(r.A0, r.T1, printNullLabel)
+
+        // si no es -1, se hace el numero normal (no hay division sobre 0)
         this.li(r.A7, 1)
         this.ecall()
+        this.j(printEndLabel)
+
+        // Imprimir "null"
+        this.addLabel(printNullLabel)
+        this.printStringLiteral("null")
+
+        this.addLabel(printEndLabel)
+
 
         if (rd !== r.A0) {
             this.pop(r.A0)
@@ -207,6 +224,29 @@ export class Generador{
         this.ecall()
     }
 
+    printBoolean(rd = r.A0) {
+        const trueLabel = this.getLabel()
+        const endLabel = this.getLabel()
+        
+        if (rd !== r.A0) {
+            this.add(r.A0, rd, r.ZERO)
+        }
+        
+        // Si A0 es 1, salta a imprimir "true"
+        this.bne(r.A0, r.ZERO, trueLabel)
+        
+        // Imprime "false"
+        this.printStringLiteral("false")
+        this.j(endLabel)
+        
+        // Imprime "true"
+        this.addLabel(trueLabel)
+        this.printStringLiteral("true")
+        
+        this.addLabel(endLabel)
+    }
+
+    
     endProgram() {
         this.li(r.A7, 10)
         this.ecall()
@@ -253,12 +293,32 @@ export class Generador{
                 this.push(r.T0) 
                 length = 4
                 break
+                
             case "boolean":
                 this.li(r.T0, object.valor ? 1 : 0)
                 this.push(r.T0)
                 length = 4
                 break
-            
+
+                /*
+            case "boolean":
+                this.push(r.HP) 
+
+                const boolStr = object.valor ? "true" : "false"
+
+                for (let i = 0; i < boolStr.length; i++) {
+                    this.li(r.T0, boolStr.charCodeAt(i))
+                    this.sb(r.T0, r.HP)
+                    this.addi(r.HP, r.HP, 1)
+                }
+                
+                this.sb(r.ZERO, r.HP)
+                this.addi(r.HP, r.HP, 1)
+                
+                length = object.valor ? 4 : 5 // "true" length or "false" length
+                //length = 4
+                break
+                */
             case "float":
                 const ieee754 = numberToF32(object.valor)
                 this.li(r.T0, ieee754)
@@ -423,10 +483,41 @@ main:
         this.instrucciones.push(new Instruction('fcvt.s.w', rd, rs1))
     }
 
+    // Relacionales
+    feq(rs1, rs2) {
+        this.instrucciones.push(new Instruction('feq.s', 'a0', rs1, rs2))
+    }
+    
+    flt(rs1, rs2) {
+        this.instrucciones.push(new Instruction('flt.s', 'a0', rs1, rs2))
+    }
+    
+    fle(rs1, rs2) {
+        this.instrucciones.push(new Instruction('fle.s', 'a0', rs1, rs2))
+    }
+
+
+
+    // Operaciones auxiliar != para los flotantes y string
+    xori(rd, rs1, inmediato) {
+        this.instrucciones.push(new Instruction('xori', rd, rs1, inmediato))
+    }
 
     getFrameLocal(index){
         const frameRelativeLocal = this.objectStack.filter(obj => obj.type === "local")
         return frameRelativeLocal[index]
+    }
+
+    printStringLiteral(string){
+        const stringArray = stringTo1ByteArray(string)
+        stringArray.pop()
+
+        this.comment(`Imprimiendo literal ${string}`);
+
+        stringArray.forEach((charCode) => {
+            this.li(r.A0, charCode)
+            this.printChar()
+        })
     }
 
 }
