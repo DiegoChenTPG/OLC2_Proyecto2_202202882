@@ -115,6 +115,8 @@ export class Generador{
         this.instrucciones.push(new Instruction('bge', rs1, rs2, label))
     }
 
+
+
     li(rd, inmediato) {
         this.instrucciones.push(new Instruction('li', rd, inmediato))
     }
@@ -275,10 +277,6 @@ export class Generador{
 
                 stringArray.forEach((charChode) => {
                     this.li(r.T0, charChode)
-                    //this.push(r.T0)
-                    //this.addi(r.HP, r.HP, 4)
-                    //this.sw(r.T0, r.HP)
-
                     this.sb(r.T0, r.HP)
                     this.addi(r.HP, r.HP, 1)
                 })

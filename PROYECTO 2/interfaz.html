@@ -10,26 +10,28 @@
     
     <body>
 
-        <div class = "botones">
-            <button>Reportes</button>
-            <br></br>
-            <button id="btnCrear">Crear Archivo</button>
-            <br></br>
-            <button id="btnGuardar">Guardar Archivo</button>
-            <br></br>
-            <input type="file" id="fileInput" accept=".oak" />
-        </div>
         <div class="container">
+            <div class = "botones">
+                <button>Reportes</button>
+                <br></br>
+                <button id="btnCrear">Crear Archivo</button>
+                <br></br>
+                <button id="btnGuardar">Guardar Archivo</button>
+                <br></br>
+                <input type="file" id="fileInput" accept=".oak" />
+            </div>
             <h2 class ="titulo_oakland">OakLand</h2>
-
             <textarea id= "editor" placeholder="Escribe tus comandos aquí..."></textarea>
-            <button id="btnEjecutar">Ejecutar</button>
-            <button id="btnLimpiar">Limpiar</button>
+            <div class="boton-acciones-editor">
+                <button id="btnEjecutar">Ejecutar</button>
+                <button id="btnLimpiar">Limpiar</button>
+            </div>
             <div class="output">
                 <h3>Consola</h3>
                 <textarea id="salida" readonly></textarea>
             </div>
         </div>  
+        
         <script type="module" src="main.js"></script>
 
     </body>

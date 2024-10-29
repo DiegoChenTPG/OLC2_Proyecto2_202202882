@@ -1,11 +1,11 @@
 .container {
-    width: 600px;
-    margin: 0 auto;
+    width: 100%;
+    margin: 5px auto;
     text-align: center;
 }
 
 textarea {
-    width: 600px;
+    width: 800px;
     height: 400px;
     margin-bottom: 20px;
     background-color: black;
@@ -31,9 +31,17 @@ input {
 }
 
 /*====================================*/
+.boton-acciones-editor {
+    display: flex; /* Usa Flexbox para organizar los botones en una fila */
+    justify-content: center; /* Centra los botones horizontalmente */
+    margin-top: 20px; /* Espacio adicional */
+    margin-right: 1px;
+}
+
 
 .botones{
     text-align: left;
+    
 }
 
 .output textarea {
@@ -42,7 +50,7 @@ input {
     background-color: black;
     /*font-size: large;*/
     font-size: x-large; 
-    height: 230px;
+    height: 250px;
 }
 
 h3 {

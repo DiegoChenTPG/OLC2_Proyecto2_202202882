@@ -738,59 +738,77 @@ export class CompilerVisitor extends BaseVisitor {
      */
     visitSwitch(node){
         this.code.comment("Inicio del Switch")
-    
-        // Evaluar la expresión del switch
+
+        // Evaluar la expresión del switch y guardarla
         this.code.comment("Evaluación de expresión switch")
         node.inicial.accept(this)
-        this.code.popObject(r.T1)  // Guardamos el valor a comparar en T1
-        
+        this.code.popObject(r.T1)  // Valor a comparar en T1
+    
         const endSwitchLabel = this.code.getLabel()
-        const labels = new Map() // Para almacenar los labels de cada caso
+        const oldBreakLabel = this.breakLabel
+        this.breakLabel = endSwitchLabel
+    
+        // Generar etiquetas para cada caso
+        const caseLabels = node.casos.map(() => this.code.getLabel())
         
-        // Generar labels para cada caso
-        node.casos.forEach(caso => {
-            labels.set(caso, this.code.getLabel())
-        })
-        
-        // Label para el default si existe
+        // Etiqueta para el default (si existe)
         const defaultLabel = node.c_default ? this.code.getLabel() : endSwitchLabel
-        
-        // Comparar con cada caso
-        node.casos.forEach(caso => {
-            this.code.comment(`Case ${caso.valor}`)
-            this.code.li(r.T0, caso.valor)
-            this.code.beq(r.T1, r.T0, labels.get(caso))
-        })
-        
-        // Saltar al default si ningún caso coincide
-        this.code.j(defaultLabel)
-        
-        // Generar código para cada caso
+    
+        // Generar comparaciones y saltos para cada caso
         node.casos.forEach((caso, index) => {
-            this.code.addLabel(labels.get(caso))
-            this.code.comment(`Sentencias case ${caso.exp}`)
-            declaraciones.accept(this)
+            this.code.comment(`Comparación Case ${index}`)
             
+            // Evaluamos expresion
+            caso.exp.accept(this)
+            this.code.popObject(r.T0)
             
-            // Si no hay break explícito, continuamos al siguiente caso
-            if (!caso.tieneBreak) {
-                const nextCase = node.casos[index + 1]
-                if (nextCase) {
-                    this.code.j(labels.get(nextCase))
-                } else if (node.casoDefault) {
-                    this.code.j(defaultLabel)
-                }
-            } else {
-                this.code.j(endSwitchLabel)
-            }
+            this.code.beq(r.T1, r.T0, caseLabels[index])
         })
-        
-        // Generar código para el default si existe
+    
+        // saltar al default en dado caso no coincida ninguno
+        this.code.j(defaultLabel)
+    
+        // Generar cada caso
+        node.casos.forEach((caso, index) => {
+            this.code.addLabel(caseLabels[index])
+            this.code.comment(`Inicio Case ${index}`)
+            
+            // Crear nuevo ámbito para las declaraciones
+            this.code.newScope()
+            
+            // Procesar las declaraciones del caso
+            caso.declaraciones.forEach(decl => {
+                decl.accept(this)
+            })
+            
+            // Si no es el último caso y no hay break explícito
+            // caer al siguiente caso (fall-through)
+            if (index < node.casos.length - 1) {
+                this.code.j(caseLabels[index + 1])
+            } else if (node.c_default) {
+                this.code.j(defaultLabel)
+            }
+            
+            this.code.endScope()
+            this.code.comment(`Fin Case ${index}`)
+        })
+    
+        // Generacion del default si existe
         if (node.c_default) {
             this.code.addLabel(defaultLabel)
-            this.code.comment("Default case")
-            node.casoDefault.accept(this)
+            this.code.comment("Inicio Default Case")
+            
+            this.code.newScope()
+            node.c_default.declaraciones_dflt.forEach(decl => {
+                decl.accept(this)
+            })
+            this.code.endScope()
+            
+            this.code.comment("Fin Default Case")
         }
+    
+        // Restaurar la etiqueta de break anterior
+        this.breakLabel = oldBreakLabel
         
         this.code.addLabel(endSwitchLabel)
         this.code.comment("Fin del Switch")
@@ -799,7 +817,6 @@ export class CompilerVisitor extends BaseVisitor {
     /**
      * @type {BaseVisitor['visitDeclaracionFuncion']}
      */
-
     visitDeclaracionFuncion(node) {
         const baseSize = 2 // | ra | fp |
         const paramSize = node.parametros.length // | ra | fp | p1 | p2 | ... | pn |
@@ -944,7 +961,6 @@ export class CompilerVisitor extends BaseVisitor {
 
         }
 
-
         this.code.j(this.returnLabel)
         this.code.comment(`Final Return`)
 
@@ -970,6 +986,27 @@ export class CompilerVisitor extends BaseVisitor {
         this.code.callBuiltin('parseFloat')
         this.code.pushObject({ type: 'float', length: 4 })
     }
+
+    /**
+     * @type {BaseVisitor['visitFuncToLowerCase']}
+     */
+    visitFuncToLowerCase(node){
+        node.exp.accept(this)
+        this.code.popObject(r.A0)
+        this.code.callBuiltin('toLowerCase')
+        this.code.pushObject({ type: 'string', length: 4 })
+    }
+
+    /**
+     * @type {BaseVisitor['visitFuncToUpperCase']}
+     */
+    visitFuncToUpperCase(node){
+        node.exp.accept(this)
+        this.code.popObject(r.A0)
+        this.code.callBuiltin('toUpperCase')
+        this.code.pushObject({ type: 'string', length: 4 })
+    }
+
 }
 
 

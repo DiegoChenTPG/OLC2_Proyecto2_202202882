@@ -8,7 +8,6 @@ export const concatString = (code) => {
     code.comment("Guardando en el stack la direccion en heap de la cadena concatenada")
     code.push(r.HP)
 
-
     code.comment("Copiando la 1er cadena en el heap")
     const end1 = code.getLabel()
     const loop1 = code.addLabel()
@@ -257,7 +256,7 @@ export const parseInt = (code) => {
     code.addLabel(error)
     code.li(r.T0, 0)
     code.push(r.T0)
-    code.printStringLiteral("ERROR: NO SE PUEDE CONVERTIR A ENTERO")
+    code.printStringLiteral("ERROR: NO SE PUEDE CONVERTIR A ENTERO\n")
 
     code.addLabel(endBuiltin)
 
@@ -266,6 +265,7 @@ export const parseInt = (code) => {
 /**
  * @param {Generador} code 
  */
+
 export const parseFloat = (code) => {
 
     code.push(r.A0)
@@ -349,6 +349,89 @@ export const parseFloat = (code) => {
 }
 
 
+/**
+ * @param {Generador} code 
+ */
+
+export const toLowerCase = (code) => {
+    code.add(r.T0, r.A0, r.ZERO)  // Dirección original
+    code.add(r.T1, r.HP, r.ZERO)  // Nueva dirección
+    code.push(r.T1)  // Guardamos el inicio del nuevo string
+    
+    const convertLoop = code.getLabel()
+    const endConvert = code.getLabel()
+    const noConvert = code.getLabel()
+
+    code.addLabel(convertLoop)
+    code.lb(r.T2, r.T0)
+    code.beq(r.T2, r.ZERO, endConvert)
+    
+    // Si está entre A-Z (65-90), convertir a minúscula (+32)
+    code.li(r.T3, 65)  // 'A'
+    code.li(r.T4, 90)  // 'Z'
+    code.blt(r.T2, r.T3, noConvert)
+    code.blt(r.T4, r.T2, noConvert)
+    code.addi(r.T2, r.T2, 32)
+
+    code.sb(r.T2, r.HP)
+    code.addi(r.HP, r.HP, 1)
+    code.addi(r.T0, r.T0, 1)
+    code.j(convertLoop)
+    
+    code.addLabel(noConvert)
+    code.sb(r.T2, r.HP)  // Almacenar el carácter sin convertir
+    code.addi(r.HP, r.HP, 1)  // Incrementar el puntero de la pila
+    code.addi(r.T0, r.T0, 1)  // Incrementar la dirección original
+    code.j(convertLoop)  // Volver al inicio del bucle
+
+
+    code.addLabel(endConvert)
+    code.sb(r.ZERO, r.HP)
+    code.addi(r.HP, r.HP, 1)
+}
+
+/**
+ * @param {Generador} code 
+ */
+export const toUpperCase = (code) => {
+    code.add(r.T0, r.A0, r.ZERO)  // Dirección original
+    code.add(r.T1, r.HP, r.ZERO)  // Nueva dirección
+    code.push(r.T1)  // Guardamos el inicio del nuevo string
+    
+    const convertLoop = code.getLabel()
+    const endConvert = code.getLabel()
+    const noConvert = code.getLabel()
+
+    code.addLabel(convertLoop)
+    code.lb(r.T2, r.T0)
+    code.beq(r.T2, r.ZERO, endConvert)
+    
+    // Si está entre a-z (97-122), convertir a mayúscula (-32)
+    code.li(r.T3, 97)  // 'a'
+    code.li(r.T4, 122)  // 'z'
+    code.blt(r.T2, r.T3, noConvert)
+    code.blt(r.T4, r.T2, noConvert)
+    code.addi(r.T2, r.T2, -32)
+    
+    code.sb(r.T2, r.HP)
+    code.addi(r.HP, r.HP, 1)
+    code.addi(r.T0, r.T0, 1)
+    code.j(convertLoop)
+    
+    code.addLabel(noConvert)
+    code.sb(r.T2, r.HP)  // Almacenar el carácter sin convertir
+    code.addi(r.HP, r.HP, 1)  // Incrementar el puntero de la pila
+    code.addi(r.T0, r.T0, 1)  // Incrementar la dirección original
+    code.j(convertLoop)  // Volver al inicio del bucle
+
+    code.addLabel(endConvert)
+    code.sb(r.ZERO, r.HP)
+    code.addi(r.HP, r.HP, 1)
+}
+
+
+
+
 export const builtins = {
     concatString,
     compareString,
@@ -360,6 +443,9 @@ export const builtins = {
     lessThan,
     charToString,
     parseInt, 
-    parseFloat
+    parseFloat, 
+    toLowerCase,
+    toUpperCase, 
+
 }
 
