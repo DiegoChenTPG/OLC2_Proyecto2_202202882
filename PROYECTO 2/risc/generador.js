@@ -107,7 +107,7 @@ export class Generador{
     blt(rs1, rs2, label){
         this.instrucciones.push(new Instruction('blt', rs1, rs2, label))
     }
-
+            
     /**
      * >=
      */

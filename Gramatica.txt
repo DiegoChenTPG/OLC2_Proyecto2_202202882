@@ -1,0 +1,81 @@
+programa = _ dcl:Declaracion* _
+
+Declaracion = dcl:Declaracion_Variable _ ";" _
+            / dclF:Declaracion_Funcion _ 
+            / dclS:Declaracion_Struct _ ";" _
+            / dclA:Declaracion_Arreglo _ ";" _ 
+            / stmt:Sentencias _ 
+
+Declaracion_Variable = "var" _ id:ID _ "=" _ exp:Expresion _
+                    / tipo:Tipo _ id:ID _ exp:("=" _ exp:Expresion)?
+
+Declaracion_Arreglo = tipo:Tipo _ "[" _ "]" _ id:ID _ "=" _ "{" _ valors:ValoresArreglo? _ "}" 
+                    / tipo:Tipo _ "[" _ "]" _ id:ID _ "=" _ "new" _ tipo2:Tipo _ "[" cantidad:Expresion "]"
+                    / tipo:Tipo _ "[" _ "]" _ id:ID _ "=" _ arreglo:Expresion
+
+ValoresArreglo = val:Expresion _ valors:(","_ vals:Expresion)*
+
+Declaracion_Funcion = tipo:TipoFuncion _ id:ID _ "(" _ parametros:Parametros? _ ")" _ bloque:Bloque 
+
+Parametros = id:Param _ parametros:(","_ ids:Param)*
+
+Param = tipo:Tipo _ id:ID 
+
+Declaracion_Struct =  "struct" _ id:ID _ "{" _ declaraciones:Cuerpo_Struct* _ "}"
+
+Cuerpo_Struct = dcl:Declaracion_Variable _ ";" _
+              / dcl:Declaracion_Funcion _ 
+
+Sentencias = "System.out.println(" _ imp:Expresion _ impre:("," _ imps:Expresion)* ")" _ ";"
+    / Bloque
+    / "if" _ "(" _ condicion:Expresion _ ")" _ sentenciasTrue:Sentencias sentenciasFalse:( _ "else" _ sentenciasFalse:Sentencias)?
+    / "while" _ "(" _ condicion:Expresion _ ")" _ sentencias:Sentencias 
+    / "for" _ "(" _ inicializacion:(Declaracion_Variable / Expresion) _ ";" _ condicion:Expresion _ ";" _ actualizacion:Expresion ")" _ sentencias:Sentencias 
+    / SwitchCase
+    / "break" _ ";" 
+    / "continue" _ ";" 
+    / "return" _ exp:Expresion? _ ";" 
+    / exp:Expresion _ ";"
+
+Bloque = "{" _ dcls:Declaracion* _ "}"
+
+SwitchCase = "switch" _ "(" _ inicial:Expresion _ ")" _ "{" _ casos:Cases+ _ c_default:Default? _ "}"
+
+Cases = "case" _ exp:Expresion _ ":" _ declaraciones:Declaracion*
+
+Default = "default" _ ":" _ declaraciones_dflt:Declaracion*
+
+Propiedad = id:ID _ ":" _ valor:Expresion 
+
+Expresion = Asignacion
+
+Asignacion = asignado:Llamada _ op:("=" / "+=" / "-=") _ asignacion:Asignacion
+
+Or = izq:And expansion:( _ op:"||" _ der:And)* 
+
+And = izq:Comparativos expansion:( _ op:"&&" _ der:Comparativos)* 
+
+Comparativos = izq:Relacionales expansion:( _ op:("==" / "!=") _ der:Relacionales)* 
+
+Relacionales = izq:Suma expansion:( _ op:(">=" / "<=" / "<" / ">") _ der:Suma)* 
+
+Suma = izq:Multiplicacion expansion:( _ op:("+" / "-") _ der:Multiplicacion)* 
+
+Multiplicacion = izq:Unaria expansion:( _ op:("*" / "/" / "%") _ der:Unaria)* 
+
+Unaria = op:("-"/"!") _ num:Unaria 
+
+Llamada = objetivoInicial:Valor _ 
+  operaciones:(("(" _ args: Argumentos? _ ")" 
+    / ("." _ id: ID))*
+
+Argumentos = arg:Expresion _ args:("," _ exp:Expresion)*
+
+Propiedades = arg:Propiedad _ args:("," _ exp:Propiedad)*
+
+Valor = valor: Literal / id:ID / "null"
+
+Literal = "true" 
+       / "false" 
+       / numero:NUM 
+       / string:STRING 
